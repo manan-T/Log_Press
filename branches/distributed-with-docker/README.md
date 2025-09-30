@@ -1,11 +1,5 @@
 # Logpress: Distributed Template-Based Log Compressor & Searcher 🚀
 
-Owner of this branch - pjibhak [Pranav Jibhakate](https://github.com/pranavJibhakate)
-
-**Logpress** is a distributed system for efficient log compression, decompression, and search using a template-based mechanism and custom zlib dictionaries. It now includes microservices for chunk-based log transport and processing.
-
----
-
 ## Features ✨
 
 - **Compress:** Deduplicate and compress log files using templates.
