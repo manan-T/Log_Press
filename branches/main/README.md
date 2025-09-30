@@ -1,18 +1,5 @@
 # LogPress: Optimized Compression and Retrieval of Unstructured Logs.
 
-## Team 6 (during presentation)
-The collaborators for this project and the work performed by them,
-- ndudhel [Neel Dudheliya](https://github.com/Neel317) worked on chunk-based approach
-- tgandhi [Tanay Gandhi](https://github.com/tanay306) worked on clustering and naive approach
-- pjibhak [Pranav Jibhakate](https://github.com/pranavJibhakate) worked on distributed approach.
-
-## Which branches have our latest code:
-Each branch has different approaches in them and hence we were not able to merge it into one. The code in these branches are used during our Demo and test results. Every branch has its own owner(collaborator), setup guide and details in the individual Readme.md
-- Naive approach - [dev](https://github.com/tanay306/LogPress/tree/dev)
-- Chunk based approach - [parallel-search](https://github.com/tanay306/LogPress/tree/parallel-search)
-- Clustering approach (K-Means) - [clustering](https://github.com/tanay306/LogPress/tree/clustering)
-- Distributed approach - [distributed-with-docker](https://github.com/tanay306/LogPress/tree/distributed-with-docker)
-
 ## Dependencies
 
 ### macOS(Homebrew)
