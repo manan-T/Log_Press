@@ -1,0 +1,146 @@
+package main
+
+import (
+	"database/sql"
+	"encoding/json"
+	"fmt"
+	"io"
+	"log"
+	"net/http"
+
+	_ "github.com/mattn/go-sqlite3"
+)
+
+// Struct to represent incoming JSON
+type Payload struct {
+	Templates []string `json:"templates"`
+	Variables []string `json:"variables"`
+	Files     []string `json:"files"`
+}
+
+func main() {
+	db, err := sql.Open("sqlite3", "./logdata.db")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	// Create tables
+	createTables(db)
+
+	http.HandleFunc("/upload", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Only POST supported", http.StatusMethodNotAllowed)
+			return
+		}
+
+		println("Got request")
+
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, "Error reading request", http.StatusBadRequest)
+			return
+		}
+		defer r.Body.Close()
+
+		var payload Payload
+		if err := json.Unmarshal(body, &payload); err != nil {
+			http.Error(w, "Invalid JSON", http.StatusBadRequest)
+			return
+		}
+
+		tx, err := db.Begin()
+		if err != nil {
+			http.Error(w, "Failed to begin transaction", http.StatusInternalServerError)
+			return
+		}
+		idMap := make(map[string]map[string]int64)
+		insertMany(tx, "templates", payload.Templates, idMap)
+		insertMany(tx, "variables", payload.Variables, idMap)
+		insertMany(tx, "files", payload.Files, idMap)
+
+		if err := tx.Commit(); err != nil {
+			http.Error(w, "Failed to commit transaction", http.StatusInternalServerError)
+			return
+		}
+
+		response, err := json.Marshal(idMap)
+		if err != nil {
+			http.Error(w, "Failed to marshal response", http.StatusInternalServerError)
+			return
+		}
+
+		// Set the content type to JSON and write the response
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write(response)
+
+		// fmt.Fprintln(w, "Inserted JSON data into SQLite tables successfully.")
+	})
+
+	fmt.Println("Server started at :8083")
+	log.Fatal(http.ListenAndServe(":8083", nil))
+}
+
+func createTables(db *sql.DB) {
+	stmts := []string{
+		`CREATE TABLE IF NOT EXISTS templates (id INTEGER PRIMARY KEY AUTOINCREMENT, template TEXT UNIQUE);`,
+		`CREATE TABLE IF NOT EXISTS variables (id INTEGER PRIMARY KEY AUTOINCREMENT, value TEXT UNIQUE);`,
+		`CREATE TABLE IF NOT EXISTS files (id INTEGER PRIMARY KEY AUTOINCREMENT, filename TEXT UNIQUE);`,
+	}
+
+	for _, stmt := range stmts {
+		if _, err := db.Exec(stmt); err != nil {
+			log.Fatalf("Error creating table: %v", err)
+		}
+	}
+}
+
+func insertMany(tx *sql.Tx, table string, items []string, idMap map[string]map[string]int64) error {
+	// Initialize the map for the specific table if it doesn't exist
+	if _, exists := idMap[table]; !exists {
+		idMap[table] = make(map[string]int64)
+	}
+
+	// Prepare the statement
+	stmt, err := tx.Prepare(fmt.Sprintf("INSERT OR IGNORE INTO %s (%s) VALUES (?);", table, columnName(table)))
+	if err != nil {
+		log.Fatalf("Prepare failed for table %s: %v", table, err)
+		return err
+	}
+	defer stmt.Close()
+
+	for _, item := range items {
+		// Execute the insert statement
+		result, err := stmt.Exec(item)
+		if err != nil {
+			log.Fatalf("Insert failed for table %s: %v", table, err)
+			return err
+		}
+
+		// Get the ID of the inserted row
+		lastInsertID, err := result.LastInsertId()
+		if err != nil {
+			log.Fatalf("Failed to get last insert ID: %v", err)
+			return err
+		}
+
+		// Save the value and corresponding row ID in the map for the table
+		idMap[table][item] = lastInsertID
+	}
+
+	return nil
+}
+
+func columnName(table string) string {
+	switch table {
+	case "templates":
+		return "template"
+	case "variables":
+		return "value"
+	case "files":
+		return "filename"
+	default:
+		return "value"
+	}
+}
