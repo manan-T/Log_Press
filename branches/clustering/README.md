@@ -1,7 +1,3 @@
-# Clustering Based Log Compressor & Searcher
-
-Owner of this branch - tgandhi [Tanay Gandhi](https://github.com/tanay306)
-
 ## Prerequisites
 
 - A C++ compiler with C++17 support (e.g., g++ or clang++).
